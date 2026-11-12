@@ -134,6 +134,7 @@ const CFG = window.APP_CONFIG || {};
 const DEMO = location.hash === '#demo';
 const NOT_CONNECTED = !CFG.SUPABASE_URL && !DEMO;
 const S = { status:{}, events:[], messages:[], chat:[], tasks:{}, kv:{}, connected:false };
+window.__S = S; // debug/testing handle
 let sb = null, rerender = () => {};
 const AG = {
   manager:{name:'המנהל',emoji:'🧠',shirt:'#8b5cf6',hair:'#2b1b0e',skin:'#f1c27d',seat:{x:336,y:80},face:'up',coffee:{x:330,y:160}},
@@ -271,6 +272,7 @@ function startDemo(){
     18:['content','campaigner','📁 רילס מוכן: Snuffle Mat v2']};
   let i = 0, loopStart = Date.now();
   setInterval(() => {
+    if (window.__pause) return;
     const t = (Date.now() - loopStart) / 1000;
     while (i < script.length && script[i][0] <= t){
       const [tt, id, ch] = script[i++]; S.status[id] = Object.assign({}, S.status[id], ch, {since:new Date().toISOString()});
@@ -293,7 +295,7 @@ function demoReply(text){
 }
 
 // ======================= office (canvas) =======================
-const W = 384, H = 216, CORR = 118, DOOR = {x:32, y:44}, BOARD = {x:134, y:50}, SPEED = 55; // px per second
+const W = 384, H = 270, CORR = 118, LANE = 134, MEET_Y = 204, DOOR = {x:32, y:44}, BOARD = {x:134, y:50}, SPEED = 55; // px per second
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let SC = 3; const chars = {}; const marks = {}; const floaters = [];
 function onEvent(e){
@@ -302,21 +304,31 @@ function onEvent(e){
   const f = {product_imported:'+1 📦', post_published:'+1 📸', campaign_created:'+1 📢'}[e.kind];
   if (f) floaters.push({text:f, born:Date.now()});
 }
+const MEET = {manager:{x:96,y:236,face:'right'}, researcher:{x:132,y:222,face:'down'}, editor:{x:172,y:222,face:'down'},
+              content:{x:132,y:258,face:'up'}, campaigner:{x:172,y:258,face:'up'}};
+const inRoom = p => p.y > 196;
 function targetOf(st){
   const a = AG[st.agent]; if (!a) return null;
   if (!st.present) return {spot:DOOR, leave:true};
   if ((st.state === 'handoff' || st.state === 'reviewing') && AG[st.target]) { const s = AG[st.target].seat; return {spot:{x:s.x+15, y:s.y}, face:'left'}; }
-  if (st.state === 'meeting') { const i = IDS.indexOf(st.agent); return {spot:{x:110 + i*22, y:CORR - 2 + (i%2)*10}, face:i%2 ? 'up' : 'down'}; }
+  if (st.state === 'meeting') { const m = MEET[st.agent]; return {spot:{x:m.x, y:m.y}, face:m.face, seated:true, meeting:true}; }
   if (st.state === 'working') return {spot:a.seat, face:a.face, seated:true};
   if (/קפה|☕/.test(st.activity || '')) return {spot:a.coffee, face:'down'};
   if (st.activity && st.activity.includes('דוח')) return {spot:BOARD, face:'up'};
   return {spot:a.seat, face:a.face, seated:true};
 }
 function pathTo(c, to){
-  const p = [];
-  if (Math.abs(c.y - CORR) > 0.5 && Math.abs(c.x - to.x) > 0.5) p.push({x:c.x, y:CORR});
-  if (Math.abs(c.x - to.x) > 0.5) p.push({x:to.x, y:CORR});
-  p.push({x:to.x, y:to.y}); return p;
+  const p = []; let cur = {x:c.x, y:c.y};
+  const go = q => { p.push(q); cur = q; };
+  if (inRoom(cur)) { go({x:cur.x, y:MEET_Y}); go({x:LANE, y:MEET_Y}); go({x:LANE, y:CORR}); }   // leave the meeting room via its door
+  if (inRoom(to)) {
+    if (Math.abs(cur.y - CORR) > 0.5 && Math.abs(cur.x - LANE) > 0.5) go({x:cur.x, y:CORR});
+    if (Math.abs(cur.x - LANE) > 0.5) go({x:LANE, y:CORR});
+    go({x:LANE, y:MEET_Y}); go({x:to.x, y:MEET_Y}); go({x:to.x, y:to.y}); return p;
+  }
+  if (Math.abs(cur.y - CORR) > 0.5 && Math.abs(cur.x - to.x) > 0.5) go({x:cur.x, y:CORR});
+  if (Math.abs(cur.x - to.x) > 0.5) go({x:to.x, y:CORR});
+  go({x:to.x, y:to.y}); return p;
 }
 function syncChars(){
   IDS.forEach(id => {
@@ -381,12 +393,24 @@ function room(now){
   desk(60,62,'researcher',now); desk(160,62,'editor',now); desk(60,150,'content',now); desk(160,150,'campaigner',now);
   R(306,184,52,6,'#92400e'); R(306,190,52,10,'#b45309'); R(316,164,26,8,'#8b5a2b'); R(320,165,4,3,'#fff'); R(328,165,4,3,'#fff');
   R(362,128,16,22,'#374151'); R(364,131,12,8,'#111827'); R(374,131,2,2,(Math.floor(now/500)%2)?'#ef4444':'#7f1d1d');
-  R(240,46,10,16,'#93c5fd'); R(241,44,8,4,'#bfdbfe'); plant(12,56); plant(12,200); plant(232,196); plant(118,196);
+  R(240,46,10,16,'#93c5fd'); R(241,44,8,4,'#bfdbfe'); plant(12,56); plant(240,190);
+  // ---- meeting room ----
+  const meetingOn = IDS.some(id => S.status[id]?.state === 'meeting');
+  R(46,198,236,72,'#5b4636'); for (let x = 46; x < 282; x += 12) R(x,198,1,72,'#4e3b2d');
+  R(84,228,104,20,'#3f2a1c'); R(86,226,100,20,'#6b4423'); R(88,228,96,16,'#7c5230');            // table
+  [[132,219],[172,219],[132,255],[172,255]].forEach(([x,y]) => { R(x-5,y-3,10,5,'#1f2937'); });  // chairs
+  R(88,232,3,8,'#1f2937');
+  R(240,206,36,22,'#111827'); R(242,208,32,18, meetingOn ? '#0ea5e9' : '#0f172a');                // screen
+  if (meetingOn) { txt('📊', 258, 217, 8, '#fff'); }
+  R(100,236,6,4,'#f8fafc'); R(150,232,8,5,'#fde68a'); R(170,238,5,4,'#f8fafc');                    // laptops & papers
+  plant(58,262); plant(270,262);
+  ctx.fillStyle = 'rgba(186,230,253,.35)'; ctx.fillRect(46,196,82,2); ctx.fillRect(142,196,140,2);  // glass wall with door at LANE
+  txt('🗣️ חדר ישיבות', 196, 203, 5, '#fde68a');
   R(10,96,14,34,'#6b4423'); for (let i = 0; i < 4; i++) R(11,98+i*8,12,6,['#ef4444','#3b82f6','#eab308','#10b981'][i]);
   return h;
 }
 function person(c, now){
-  const a = AG[c.id], x = Math.round(c.x), y = Math.round(c.y), seated = c.st?.state === 'working' && !c.moving && c.t?.seated;
+  const a = AG[c.id], x = Math.round(c.x), y = Math.round(c.y), seated = (c.st?.state === 'working' || c.st?.state === 'meeting') && !c.moving && c.t?.seated;
   const s = seated ? 1 : 0, walk = c.moving ? Math.floor(now/140) % 2 : 0;
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y, 5, 1.6, 0, 0, Math.PI*2); ctx.fill();
   if (seated) R(x-5,y-5,10,5,'#334155'); else { R(x-3,y-4+(walk?1:0),2,4,'#1f2937'); R(x+1,y-4+(walk?0:1),2,4,'#1f2937'); }
