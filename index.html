@@ -110,7 +110,7 @@
       <div class="typing" id="typing" style="padding:0 14px 6px">🧠 המנהל מקליד…</div>
       <div class="composer"><textarea id="inp" rows="1" placeholder="כתוב למנהל…"></textarea><button id="send">➤</button></div>
     </section>
-    <section class="view" id="view-log"><div class="seg" id="logSeg"><button data-f="all" class="on">הכל</button><button data-f="talk">שיחות בין הסוכנים</button><button data-f="manager">המנהל</button></div><div class="feed" id="feed"></div></section>
+    <section class="view" id="view-log"><div class="seg" id="logSeg"><button data-f="all" class="on">הכל</button><button data-f="talk">שיחות ופגישות</button><button data-f="manager">המנהל</button></div><div class="feed" id="feed"></div></section>
     <section class="view" id="view-tasks"><div id="tasks"></div></section>
   </main>
   <nav>
@@ -306,6 +306,7 @@ function targetOf(st){
   const a = AG[st.agent]; if (!a) return null;
   if (!st.present) return {spot:DOOR, leave:true};
   if ((st.state === 'handoff' || st.state === 'reviewing') && AG[st.target]) { const s = AG[st.target].seat; return {spot:{x:s.x+15, y:s.y}, face:'left'}; }
+  if (st.state === 'meeting') { const i = IDS.indexOf(st.agent); return {spot:{x:110 + i*22, y:CORR - 2 + (i%2)*10}, face:i%2 ? 'up' : 'down'}; }
   if (st.state === 'working') return {spot:a.seat, face:a.face, seated:true};
   if (/קפה|☕/.test(st.activity || '')) return {spot:a.coffee, face:'down'};
   if (st.activity && st.activity.includes('דוח')) return {spot:BOARD, face:'up'};
@@ -420,7 +421,8 @@ function frame(now){
   const dk = (h < 6.4 || h > 19.6 ? .5 : (h < 7.6 || h > 18 ? .22 : 0)) * (people.length ? .35 : 1);
   if (dk){ ctx.fillStyle = `rgba(8,10,40,${dk})`; ctx.fillRect(0,0,W,H); }
   const placed = [];
-  people.slice().reverse().forEach(c => { const top = c.y - 16; const t = c.moving ? '' : (c.st?.activity || '');
+  const lastSaid = {}; S.messages.filter(m => m.recipient === 'team').slice(-5).forEach(m => lastSaid[m.sender] = m.text);
+  people.slice().reverse().forEach(c => { const top = c.y - 16; const t = c.moving ? '' : (c.st?.state === 'meeting' && lastSaid[c.id] ? lastSaid[c.id] : (c.st?.activity || ''));
     if (t) bubble(c.x, top, t, placed); else txt(AG[c.id].emoji, c.x, top - 3, 6, '#fff'); });
   IDS.forEach(id => { const m = marks[id]; if (!m || Date.now() > m.until) return; const p = chars[id] || AG[id].seat;
     ctx.fillStyle = m.kind === 'fix' ? '#ef4444' : '#22c55e'; ctx.beginPath(); ctx.arc(p.x+8, p.y-11, 4, 0, 7); ctx.fill(); txt(m.kind === 'fix' ? '!' : '✓', p.x+8, p.y-10.5, 6, '#fff', 'Rubik', 800); });
@@ -448,7 +450,7 @@ const KIND = {
 };
 function statusPill(st){
   if (!st || !st.present) return ['בבית 🏠', '#334155'];
-  return ({working:['עובד ⌨️','#15803d'], handoff:['מעביר משימה 📁','#1d4ed8'], reviewing:['בודק 🔍','#6d28d9'], idle:['במשרד','#475569']})[st.state] || ['במשרד','#475569'];
+  return ({meeting:['בפגישה 💬','#b45309'], working:['עובד ⌨️','#15803d'], handoff:['מעביר משימה 📁','#1d4ed8'], reviewing:['בודק 🔍','#6d28d9'], idle:['במשרד','#475569']})[st.state] || ['במשרד','#475569'];
 }
 let view = 'office', logFilter = 'all', unread = 0;
 function setBadge(d){ unread = d === 0 ? 0 : unread + d; const b = $('chatBadge'); b.textContent = unread; b.style.display = unread ? 'block' : 'none'; }
@@ -481,7 +483,7 @@ function renderChat(scroll){
 }
 function renderLog(){
   const rows = [...S.events.map(e => ({at:e.at, who:e.agent, text:(KIND[e.kind] || (e => `${e.kind}`))(e), type:'event'})),
-                ...S.messages.map(m => ({at:m.at, who:m.sender, text:`💬 ${AG[m.sender]?.emoji || ''} ${AG[m.sender]?.name || m.sender} ← ${AG[m.recipient]?.name || m.recipient}: ${m.text}`, type:'talk'}))]
+                ...S.messages.map(m => ({at:m.at, who:m.sender, text:`💬 ${AG[m.sender]?.emoji || ''} ${AG[m.sender]?.name || m.sender} ← ${m.recipient === 'team' ? 'הצוות' : (AG[m.recipient]?.name || m.recipient)}: ${m.text}`, type:'talk'}))]
     .filter(r => logFilter === 'all' || (logFilter === 'talk' ? r.type === 'talk' : r.who === 'manager'))
     .sort((a,b) => b.at.localeCompare(a.at)).slice(0, 250);
   $('feed').innerHTML = rows.map(r => `<div class="row"><time>${new Date(r.at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</time><span class="${r.type === 'talk' ? 'msg' : ''}">${esc(r.text)}</span></div>`).join('') || '<div class="empty">אין פעילות עדיין</div>';
