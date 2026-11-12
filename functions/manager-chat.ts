@@ -2,6 +2,7 @@
 // The manager answers in seconds, can open tasks for agents, save Danny's ideas,
 // and start an immediate work run on GitHub Actions.
 //
+// Telegram: set TELEGRAM_BOT_TOKEN, then open <fn-url>?setup=telegram once, then /start in the bot.
 // Secrets (supabase secrets set ...): ANTHROPIC_API_KEY, ALLOWED_EMAIL, GH_TOKEN, GH_REPO (owner/repo),
 // optional MANAGER_MODEL. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY are provided automatically.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -13,19 +14,71 @@ const cors = {
 const WORKERS = ["researcher", "editor", "content", "campaigner"];
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
+const TG = "https://api.telegram.org/bot";
+const tgToken = () => Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
+async function tgSecret(): Promise<string> {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("lareverie:" + tgToken()));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 48);
+}
+async function tgSend(chat_id: number | string, text: string) {
+  for (let i = 0; i < text.length; i += 3900)
+    await fetch(`${TG}${tgToken()}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id, text: text.slice(i, i + 3900) }) });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const url = new URL(req.url);
 
-  // --- auth: only Danny ---
+  // --- one-time Telegram webhook setup: open <function-url>?setup=telegram ---
+  if (req.method === "GET" && url.searchParams.get("setup") === "telegram") {
+    if (!tgToken()) return json({ error: "TELEGRAM_BOT_TOKEN secret missing" }, 400);
+    const hook = `https://${url.host}/functions/v1/manager-chat`;
+    const r = await fetch(`${TG}${tgToken()}/setWebhook`, { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: hook, secret_token: await tgSecret(), allowed_updates: ["message"] }) });
+    const me = await (await fetch(`${TG}${tgToken()}/getMe`)).json();
+    return json({ webhook: await r.json(), bot: me.result?.username, next: "Open the bot in Telegram and send /start" });
+  }
+
+  // --- Telegram message from Danny ---
+  if (req.headers.get("x-telegram-bot-api-secret-token")) {
+    if (req.headers.get("x-telegram-bot-api-secret-token") !== await tgSecret()) return json({ error: "bad secret" }, 401);
+    const upd = await req.json();
+    const msg = upd.message; const chatId = msg?.chat?.id; const text: string = msg?.text ?? "";
+    if (!chatId || !text) return json({ ok: true });
+    const { data: row } = await db.from("kv").select("value").eq("key", "telegram_chat_id").maybeSingle();
+    const owner = row?.value;
+    if (!owner) {
+      if (!text.startsWith("/start")) return json({ ok: true });
+      await db.from("kv").upsert({ key: "telegram_chat_id", value: chatId, at: new Date().toISOString() });
+      await tgSend(chatId, "✅ מחובר! אני רייצ'ל, המנהלת של La Réverie USA. כתוב לי כל דבר: \"תתחילו לעבוד עכשיו\", \"מה המצב?\", רעיונות. הדוחות וההתראות יגיעו לכאן.");
+      await db.from("chat").insert({ role: "manager", text: "✅ טלגרם חובר. מעכשיו אפשר לדבר איתי גם משם." });
+      return json({ ok: true });
+    }
+    if (String(owner) !== String(chatId)) return json({ ok: true });   // only Danny
+    if (text.startsWith("/start")) { await tgSend(chatId, "אני כאן 👋 מה תרצה?"); return json({ ok: true }); }
+    // @ts-ignore EdgeRuntime is provided by Supabase
+    EdgeRuntime.waitUntil((async () => {
+      await fetch(`${TG}${tgToken()}/sendChatAction`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, action: "typing" }) });
+      try { await tgSend(chatId, await handle(db, text)); } catch (e) { await tgSend(chatId, "⚠️ תקלה: " + String(e).slice(0, 200)); }
+    })());
+    return json({ ok: true });
+  }
+
+  // --- app (iPhone/desktop): only Danny ---
   const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   });
   const { data: { user } } = await userClient.auth.getUser();
   if (!user || user.email?.toLowerCase() !== (Deno.env.get("ALLOWED_EMAIL") ?? "dannymit16@gmail.com").toLowerCase()) return json({ error: "unauthorized" }, 401);
-
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { text } = await req.json();
   if (!text?.trim()) return json({ error: "empty" }, 400);
+  return json({ reply: await handle(db, text) });
+});
+
+async function handle(db: any, text: string): Promise<string> {
   await db.from("chat").insert({ role: "danny", text });
 
   // --- context ---
@@ -144,5 +197,5 @@ Lessons: ${JSON.stringify(learn.data ?? [])}`;
   }
   if (!reply) reply = "בוצע ✅";
   await db.from("chat").insert({ role: "manager", text: reply });
-  return json({ reply });
-});
+  return reply;
+}
