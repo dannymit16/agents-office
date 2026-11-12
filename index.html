@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="המשרד">
+<meta name="theme-color" content="#0d0f1e">
+<title>המשרד של הסוכנים</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+  :root{--bg:#0d0f1e;--panel:#161a33;--line:#2a3160;--txt:#e7e9ff;--mut:#9aa0c8;--acc:#fbbf24;--good:#4ade80;--bad:#f87171;
+        --st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom)}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:Rubik,system-ui,sans-serif;overscroll-behavior:none}
+  #app{display:flex;flex-direction:column;height:100%;padding-top:var(--st)}
+  header{display:flex;align-items:center;gap:8px;padding:10px 14px}
+  header h1{font-size:17px;margin:0;font-weight:800}
+  .dot{width:9px;height:9px;border-radius:50%;background:#555}
+  .dot.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+  .tag{font-family:'Press Start 2P';font-size:7px;background:var(--acc);color:#111;padding:4px 6px;border-radius:3px}
+  .clk{margin-inline-start:auto;font-family:'Press Start 2P';font-size:10px;color:#86efac}
+  main{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+  .view{display:none;padding:0 12px 16px}
+  .view.on{display:block}
+  nav{display:flex;border-top:2px solid var(--line);background:#0b0d1a;padding-bottom:var(--sb)}
+  nav button{flex:1;background:none;border:0;color:var(--mut);font:600 11px Rubik;padding:8px 0 6px;position:relative}
+  nav button span{display:block;font-size:20px;margin-bottom:2px}
+  nav button.on{color:var(--acc)}
+  nav .badge{position:absolute;top:4px;left:50%;margin-left:6px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:1px 5px;display:none}
+  .stage{border:3px solid #000;outline:2px solid var(--line);border-radius:6px;overflow:auto;background:#000;position:relative}
+  .stage canvas{display:block;image-rendering:pixelated;width:100%}
+  .stage.zoom canvas{width:175%}
+  .zbtn{position:absolute;top:6px;left:6px;background:#000a;color:#fff;border:1px solid #fff4;border-radius:6px;font-size:13px;padding:4px 8px;z-index:2}
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:10px;margin-top:10px}
+  .card h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:6px}
+  .pnl{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center}
+  .pnl div{background:#0f1330;border-radius:8px;padding:7px 2px}
+  .pnl span{display:block;font-size:10px;color:var(--mut)}
+  .pnl b{display:block;font-size:14px;margin-top:3px;direction:ltr}
+  .pnl .profit{outline:2px solid currentColor}
+  .goal{margin-top:10px;font-size:12px;color:var(--mut)}
+  .bar{height:12px;background:#0f1330;border-radius:8px;overflow:hidden;margin:6px 0;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#4ade80);width:0}
+  .bar i.pace{position:relative}
+  .agents{display:grid;grid-template-columns:1fr;gap:6px}
+  .ag{display:flex;align-items:center;gap:10px;background:#0f1330;border-radius:8px;padding:8px}
+  .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;border:3px solid;flex:none}
+  .ag .nm{font-weight:800;font-size:13px}
+  .ag .ac{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+  .st{margin-inline-start:auto;font-size:11px;padding:3px 8px;border-radius:20px;flex:none}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  td,th{padding:5px 3px;border-bottom:1px solid #222850;text-align:right}
+  th{color:var(--mut);font-weight:600}
+  td.n{direction:ltr;text-align:left}
+  /* chat */
+  #view-chat{display:none;flex-direction:column;height:100%;padding:0}
+  #view-chat.on{display:flex}
+  #msgs{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+  .m{max-width:85%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .m.danny{align-self:flex-start;background:#3b2f0a;border:1px solid #7c5d0f;border-bottom-right-radius:3px}
+  .m.manager{align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:3px}
+  .m.question{border:2px solid var(--acc)}
+  .m.report{border:2px solid #8b5cf6}
+  .m time{display:block;font-size:10px;color:var(--mut);margin-top:4px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .chips button{background:#0f1330;border:1px solid var(--acc);color:var(--acc);border-radius:14px;padding:4px 10px;font:600 12px Rubik}
+  .typing{align-self:flex-end;color:var(--mut);font-size:13px;display:none}
+  .composer{display:flex;gap:8px;padding:8px 12px;border-top:2px solid var(--line);background:#0b0d1a}
+  .composer textarea{flex:1;resize:none;background:var(--panel);color:var(--txt);border:2px solid var(--line);border-radius:12px;padding:9px;font:15px Rubik;max-height:120px}
+  .composer button{background:var(--acc);border:0;border-radius:12px;font-size:18px;width:46px}
+  .feed div.row{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #222850;font-size:13px;line-height:1.45}
+  .feed time{font-family:'Press Start 2P';font-size:8px;color:var(--acc);padding-top:4px;flex:none}
+  .feed .msg{color:#c4b5fd}
+  .seg{display:flex;gap:6px;margin:10px 0}
+  .seg button{flex:1;background:var(--panel);color:var(--mut);border:2px solid var(--line);border-radius:8px;padding:6px;font:600 12px Rubik}
+  .seg button.on{color:#111;background:var(--acc);border-color:var(--acc)}
+  .task{background:#0f1330;border-radius:8px;padding:8px;margin-top:6px;font-size:13px}
+  .task small{color:var(--mut);display:block;margin-top:3px}
+  /* login */
+  #login{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;padding:24px;z-index:9}
+  #login .box{width:100%;max-width:340px;text-align:center}
+  #login input{width:100%;padding:12px;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--txt);font:16px Rubik;margin:8px 0;text-align:center;direction:ltr}
+  #login button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc);font:800 16px Rubik}
+  .err{color:var(--bad);font-size:13px;min-height:18px}
+  .empty{color:var(--mut);font-size:13px;text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1>🏢 המשרד</h1><span class="dot" id="dot"></span><span class="tag" id="demoTag" style="display:none">DEMO</span><span class="clk" id="clk"></span></header>
+  <main>
+    <section class="view on" id="view-office">
+      <div class="stage" id="stage" dir="ltr"><button class="zbtn" id="zoom">🔍</button><canvas id="cv"></canvas></div>
+      <div class="card">
+        <h3>💵 היום</h3>
+        <div class="pnl" id="pnl"></div>
+        <div class="goal" id="goal"></div>
+      </div>
+      <div class="card"><h3>👥 הצוות עכשיו</h3><div class="agents" id="agents"></div></div>
+      <div class="card"><h3>📦 לפי מוצר (היום)</h3><div id="byprod"></div></div>
+    </section>
+    <section class="view" id="view-chat">
+      <div id="msgs"></div>
+      <div class="typing" id="typing" style="padding:0 14px 6px">🧠 המנהל מקליד…</div>
+      <div class="composer"><textarea id="inp" rows="1" placeholder="כתוב למנהל…"></textarea><button id="send">➤</button></div>
+    </section>
+    <section class="view" id="view-log"><div class="seg" id="logSeg"><button data-f="all" class="on">הכל</button><button data-f="talk">שיחות בין הסוכנים</button><button data-f="manager">המנהל</button></div><div class="feed" id="feed"></div></section>
+    <section class="view" id="view-tasks"><div id="tasks"></div></section>
+  </main>
+  <nav>
+    <button data-v="office" class="on"><span>🏢</span>משרד</button>
+    <button data-v="chat"><span>💬</span>מנהל<i class="badge" id="chatBadge"></i></button>
+    <button data-v="log"><span>📜</span>יומן</button>
+    <button data-v="tasks"><span>📋</span>משימות</button>
+  </nav>
+</div>
+
+<div id="login"><div class="box">
+  <div style="font-size:54px">🏢</div><h2>המשרד של הסוכנים</h2>
+  <div id="step1"><input id="email" type="email" placeholder="your@email.com" autocomplete="email"><button id="sendCode">שלח לי קוד</button></div>
+  <div id="step2" style="display:none"><p style="color:var(--mut);font-size:14px">שלחנו קוד למייל. הקלד אותו כאן:</p>
+    <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"><button id="verify">כניסה</button></div>
+  <div class="err" id="err"></div>
+</div></div>
+
+<script type="module">
+// ======================= data layer =======================
+const CFG = window.APP_CONFIG || {};
+const DEMO = location.hash === '#demo';
+const NOT_CONNECTED = !CFG.SUPABASE_URL && !DEMO;
+const S = { status:{}, events:[], messages:[], chat:[], tasks:{}, kv:{}, connected:false };
+let sb = null, rerender = () => {};
+const AG = {
+  manager:{name:'המנהל',emoji:'🧠',shirt:'#8b5cf6',hair:'#2b1b0e',skin:'#f1c27d',seat:{x:336,y:80},face:'up',coffee:{x:330,y:160}},
+  researcher:{name:'החוקר',emoji:'🔍',shirt:'#22c55e',hair:'#151515',skin:'#e0ac69',seat:{x:84,y:92},face:'up',coffee:{x:316,y:180}},
+  editor:{name:'העורך',emoji:'✏️',shirt:'#3b82f6',hair:'#7c3f00',skin:'#f6d0a8',seat:{x:184,y:92},face:'up',coffee:{x:332,y:182}},
+  content:{name:'התוכן',emoji:'📸',shirt:'#ec4899',hair:'#f59e0b',skin:'#f1c27d',seat:{x:84,y:138},face:'down',coffee:{x:348,y:180}},
+  campaigner:{name:'הקמפיינר',emoji:'📢',shirt:'#f97316',hair:'#3b2414',skin:'#c68642',seat:{x:184,y:138},face:'down',coffee:{x:364,y:182}},
+};
+const IDS = Object.keys(AG);
+const todayStr = () => new Date().toLocaleDateString('en-CA');
+
+async function startLive(){
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  sb = createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) return showLogin();
+  await loadAll(); subscribe();
+}
+async function loadAll(){
+  const since = new Date(Date.now() - 36*3600e3).toISOString();
+  const [st, ev, ms, ch, tk, kv] = await Promise.all([
+    sb.from('agent_status').select('*'),
+    sb.from('events').select('*').gte('at', since).order('id', {ascending:false}).limit(400),
+    sb.from('messages').select('*').gte('at', since).order('id', {ascending:false}).limit(200),
+    sb.from('chat').select('*').order('id', {ascending:false}).limit(150),
+    sb.from('tasks').select('*').neq('status', 'archived').order('updated_at', {ascending:false}).limit(300),
+    sb.from('kv').select('*'),
+  ]);
+  (st.data||[]).forEach(r => S.status[r.agent] = r);
+  S.events = (ev.data||[]).reverse(); S.messages = (ms.data||[]).reverse(); S.chat = (ch.data||[]).reverse();
+  (tk.data||[]).forEach(t => S.tasks[t.id] = t);
+  (kv.data||[]).forEach(r => S.kv[r.key] = r.value);
+  rerender();
+}
+function subscribe(){
+  sb.channel('live')
+    .on('postgres_changes', {event:'*', schema:'public', table:'agent_status'}, p => { S.status[p.new.agent] = p.new; rerender(); })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'events'}, p => { S.events.push(p.new); onEvent(p.new); rerender(); })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages'}, p => { S.messages.push(p.new); rerender(); })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'chat'}, p => { addChat(p.new); })
+    .on('postgres_changes', {event:'*', schema:'public', table:'tasks'}, p => { if (p.new?.id) S.tasks[p.new.id] = p.new; rerender(); })
+    .on('postgres_changes', {event:'*', schema:'public', table:'kv'}, p => { if (p.new?.key) S.kv[p.new.key] = p.new.value; rerender(); })
+    .subscribe(s => { S.connected = s === 'SUBSCRIBED'; rerender(); if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') setTimeout(() => location.reload(), 5000); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll(); });
+}
+function addChat(m){ if (S.chat.some(c => c.id === m.id)) return;
+  const local = S.chat.findIndex(c => String(c.id).startsWith('l') && c.role === m.role && c.text === m.text);
+  if (local >= 0) { S.chat[local] = m; return renderChat(); }
+  S.chat.push(m); if (m.role === 'manager') typing(false); renderChat(true); if (view !== 'chat' && m.role === 'manager') setBadge(+1); }
+async function sendChat(text){
+  if (DEMO) return demoReply(text);
+  typing(true);
+  const { data, error } = await sb.functions.invoke('manager-chat', { body:{ text } });
+  if (error){ typing(false); addChat({id:'e'+Date.now(), role:'manager', text:'⚠️ לא הצלחתי לשלוח: ' + error.message, at:new Date().toISOString()}); }
+}
+
+// ----- login (6-digit code, works inside the home-screen app) -----
+function showLogin(){
+  const $l = document.getElementById('login'); $l.style.display = 'grid';
+  const err = t => document.getElementById('err').textContent = t || '';
+  document.getElementById('sendCode').onclick = async () => {
+    const email = document.getElementById('email').value.trim(); if (!email) return;
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+    if (error) return err(error.message);
+    err(); document.getElementById('step1').style.display = 'none'; document.getElementById('step2').style.display = 'block';
+  };
+  document.getElementById('verify').onclick = async () => {
+    const email = document.getElementById('email').value.trim(), token = document.getElementById('code').value.trim();
+    const { error } = await sb.auth.verifyOtp({ email, token, type:'email' });
+    if (error) return err('קוד שגוי');
+    $l.style.display = 'none'; await loadAll(); subscribe();
+  };
+}
+
+// ======================= demo feed =======================
+function startDemo(){
+  document.getElementById('demoTag').style.display = '';
+  S.connected = true;
+  const t0 = Date.now(), iso = (m = 0) => new Date(Date.now() - m*60e3).toISOString();
+  IDS.forEach(id => S.status[id] = {agent:id, present:false, state:'away', activity:''});
+  S.kv.today_pnl = {revenue:289.9, cogs:96.4, ad_spend:214.6, fees:10.81, profit:-31.91, orders:8, roas:1.35, breakeven_roas:1.6,
+    by_product:{'Squeaky Chew Bone':{units:4,revenue:99.96,cogs:38.8,ad_spend:52.1,profit_before_fees:9.06},
+                'Snuffle Mat':{units:3,revenue:89.97,cogs:37.2,ad_spend:96.3,profit_before_fees:-43.53},
+                'LED Safety Collar':{units:1,revenue:19.99,cogs:6.6,ad_spend:41.2,profit_before_fees:-27.81},
+                'Pet Cooling Mat':{units:2,revenue:79.98,cogs:13.8,ad_spend:25.0,profit_before_fees:41.18}}};
+  S.kv.goal = {goal:10000, revenue_to_date:1874, on_pace_revenue:2000, day_of_period:7, days_left:24, needed_per_day:338.6,
+    orders_needed_per_day:10.6, ad_spend_needed_per_day:169, budget_is_enough:true, current_roas:2.0};
+  S.chat = [
+    {id:1, role:'manager', text:'בוקר טוב דני ☀️\nתוכנית להיום: 5 מוצרים חדשים לכלבים, 3 פוסטים, 2 קמפיינים.\nאתמול: Chew Bone מוביל עם ROAS 2.8, מגדילים אותו ב-20%.', at:iso(400)},
+    {id:2, role:'danny', text:'מעולה. תנסה גם מוצרים לחתולים, יש לי תחושה שזה עובד', at:iso(380)},
+    {id:3, role:'manager', text:'קיבלתי ✅\nפתחתי משימה לחוקר: 2 מוצרים לחתולים בבדיקה, עד $12 עלות.\nשמרתי את זה כרעיון שלך.', at:iso(379)},
+    {id:4, role:'manager', text:'❓ הקמפיינר מבקש להעלות תקרה יומית ל-$260: שני מנצחים עם ROAS 2.6–3.1 שלושה ימים ברצף (breakeven 1.6). צפי: +$180 הכנסה ליום. מאשר?', meta:{type:'question'}, at:iso(30)},
+  ];
+  S.messages = [
+    {sender:'manager', recipient:'researcher', text:'📁 5 מוצרים לכלבים: עלות עד $15, משלוח עד 12 יום', at:iso(300)},
+    {sender:'researcher', recipient:'editor', text:'📁 Snuffle Mat: עלות $8.90, משלוח 9 ימים', at:iso(280)},
+    {sender:'manager', recipient:'editor', text:'↩️ לתיקון: הכותרת מעל 60 תווים', at:iso(250)},
+    {sender:'content', recipient:'campaigner', text:'📁 רילס מוכן: Snuffle Mat, ig_media_id 1789…', at:iso(200)},
+  ];
+  S.events = [
+    {kind:'report_sent', agent:'manager', data:{}, at:iso(1000)},
+    {kind:'finding', agent:'manager', data:{cause:'Snuffle Mat: CTR 0.6%, הקריאייטיב לא עוצר גלילה', fix:'רילס חדש עם הוק בשנייה הראשונה'}, at:iso(990)},
+    {kind:'arrived', agent:'manager', data:{}, at:iso(420)}, {kind:'task_created', agent:'manager', data:{to:'researcher', title:'5 מוצרים לכלבים'}, at:iso(410)},
+    {kind:'product_imported', agent:'researcher', data:{input:{title:'Snuffle Mat'}}, at:iso(290)},
+    {kind:'sent_back', agent:'manager', data:{agent:'editor', why:'הכותרת מעל 60 תווים'}, at:iso(250)},
+    {kind:'post_published', agent:'content', data:{}, at:iso(200)}, {kind:'campaign_created', agent:'campaigner', data:{input:{name:'AI | Snuffle Mat'}}, at:iso(150)},
+  ];
+  [['a1','researcher','5 מוצרים לכלבים','approved'],['a2','editor','Snuffle Mat מוכן לאתר','approved'],['a3','content','רילס חדש ל-Snuffle Mat (fix)','pending'],
+   ['a4','researcher','2 מוצרים לחתולים (רעיון של דני)','pending'],['a5','campaigner','אופטימיזציה ערב','done'],['a6','editor','LED Collar: תיאור','rework']]
+   .forEach(([id,agent,title,status]) => S.tasks[id] = {id,agent,title,status,updated_at:iso(60)});
+  // scripted live loop
+  const script = [
+    [0,'manager',{present:true,state:'working',activity:'🗓️ מתכנן את היום'}],
+    [2,'researcher',{present:true,state:'idle',activity:'הגיע למשרד ☕'}],
+    [4,'manager',{state:'handoff',activity:'📁 2 מוצרים לחתולים',target:'researcher'}],
+    [6,'researcher',{state:'working',activity:'🔍 מחפש ב-AliExpress cat toys'}],
+    [6.5,'campaigner',{present:true,state:'working',activity:'📊 בודק ביצועים'}],
+    [8,'manager',{state:'idle',activity:'👀 עוקב אחרי הצוות'}],
+    [9,'content',{present:true,state:'working',activity:'🎬 רילס: Snuffle Mat'}],
+    [10,'editor',{present:true,state:'idle',activity:'הגיע למשרד ☕'}],
+    [12,'researcher',{state:'handoff',activity:'📁 Feather Wand Toy',target:'editor'}],
+    [14,'researcher',{state:'working',activity:'📦 מייבא לאתר Cat Tunnel'}],
+    [14.5,'editor',{state:'working',activity:'✏️ עורך מוצר Feather Wand Toy'}],
+    [16,'campaigner',{state:'working',activity:'💰 משנה תקציב Chew Bone +20%'}],
+    [18,'content',{state:'handoff',activity:'📁 רילס מוכן',target:'campaigner'}],
+    [20,'manager',{state:'reviewing',activity:'🔍 בודק: Feather Wand Toy',target:'editor'}],
+    [21,'content',{state:'idle',activity:'הפסקת קפה ☕'}],
+    [23,'manager',{state:'reviewing',activity:'🔍 בודק: רילס',target:'content'}],
+    [25,'researcher',{present:false,state:'away',activity:''}],
+    [26,'manager',{state:'idle',activity:'👀 עוקב אחרי הצוות'}],
+    [28,'content',{present:false,state:'away',activity:''}],
+    [30,'editor',{present:false,state:'away',activity:''}],[31,'campaigner',{present:false,state:'away',activity:''}],
+    [33,'manager',{present:false,state:'away',activity:''}],
+  ];
+  const evAt = {6:{kind:'task_started',agent:'researcher',data:{title:'2 מוצרים לחתולים'}}, 14:{kind:'product_imported',agent:'researcher',data:{input:{title:'Feather Wand Toy'}}},
+    18:{kind:'post_published',agent:'content',data:{}}, 20:{kind:'approved',agent:'manager',data:{agent:'editor',title:'Feather Wand Toy'}}};
+  const msgAt = {4:['manager','researcher','📁 2 מוצרים לחתולים: עד $12, משלוח עד 12 יום'], 12:['researcher','editor','📁 Feather Wand Toy: עלות $2.40'],
+    18:['content','campaigner','📁 רילס מוכן: Snuffle Mat v2']};
+  let i = 0, loopStart = Date.now();
+  setInterval(() => {
+    const t = (Date.now() - loopStart) / 1000;
+    while (i < script.length && script[i][0] <= t){
+      const [tt, id, ch] = script[i++]; S.status[id] = Object.assign({}, S.status[id], ch, {since:new Date().toISOString()});
+      if (evAt[tt]) { const e = Object.assign({at:new Date().toISOString()}, evAt[tt]); S.events.push(e); onEvent(e); }
+      if (msgAt[tt]) S.messages.push({sender:msgAt[tt][0], recipient:msgAt[tt][1], text:msgAt[tt][2], at:new Date().toISOString()});
+      if (tt === 16) { S.kv.today_pnl = Object.assign({}, S.kv.today_pnl, {revenue:314.89, cogs:106.1, profit:-17.83, orders:9}); }
+      rerender();
+    }
+    if (i >= script.length && t > 37){ i = 0; loopStart = Date.now(); }
+  }, 250);
+}
+function demoReply(text){
+  typing(true);
+  setTimeout(() => {
+    const yes = /מאשר|כן|סבבה|אוקיי/.test(text);
+    addChat({id:'d'+Date.now(), role:'manager', at:new Date().toISOString(), text: yes
+      ? 'אושר ✅ התקרה היומית עודכנה ל-$260.\nהקמפיינר מגדיל עכשיו את Chew Bone ואת Cooling Mat, 20% כל אחד. אעדכן בדוח הערב.'
+      : 'קיבלתי ✅\nפתחתי משימה מתאימה ושמרתי את זה כרעיון שלך. זה ייכנס לתוכנית של הסבב הבא.'});
+  }, 1400);
+}
+
+// ======================= office (canvas) =======================
+const W = 384, H = 216, CORR = 118, DOOR = {x:32, y:44}, BOARD = {x:134, y:50}, SPEED = 55; // px per second
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let SC = 3; const chars = {}; const marks = {}; const floaters = [];
+function onEvent(e){
+  if (e.kind === 'sent_back' && e.data?.agent) marks[e.data.agent] = {kind:'fix', until:Date.now() + 12000};
+  if (e.kind === 'approved' && e.data?.agent) marks[e.data.agent] = {kind:'ok', until:Date.now() + 8000};
+  const f = {product_imported:'+1 📦', post_published:'+1 📸', campaign_created:'+1 📢'}[e.kind];
+  if (f) floaters.push({text:f, born:Date.now()});
+}
+function targetOf(st){
+  const a = AG[st.agent]; if (!a) return null;
+  if (!st.present) return {spot:DOOR, leave:true};
+  if ((st.state === 'handoff' || st.state === 'reviewing') && AG[st.target]) { const s = AG[st.target].seat; return {spot:{x:s.x+15, y:s.y}, face:'left'}; }
+  if (st.state === 'working') return {spot:a.seat, face:a.face, seated:true};
+  if (/קפה|☕/.test(st.activity || '')) return {spot:a.coffee, face:'down'};
+  if (st.activity && st.activity.includes('דוח')) return {spot:BOARD, face:'up'};
+  return {spot:a.seat, face:a.face, seated:true};
+}
+function pathTo(c, to){
+  const p = [];
+  if (Math.abs(c.y - CORR) > 0.5 && Math.abs(c.x - to.x) > 0.5) p.push({x:c.x, y:CORR});
+  if (Math.abs(c.x - to.x) > 0.5) p.push({x:to.x, y:CORR});
+  p.push({x:to.x, y:to.y}); return p;
+}
+function syncChars(){
+  IDS.forEach(id => {
+    const st = S.status[id] || {agent:id, present:false}; let c = chars[id];
+    if (st.present && !c) c = chars[id] = {id, x:DOOR.x, y:DOOR.y, face:'down', path:[], key:''};
+    if (!c) return;
+    const t = targetOf({...st, agent:id}); const key = JSON.stringify([t.spot, t.leave]);
+    if (key !== c.key){ c.key = key; c.path = pathTo(c, t.spot); c.t = t; }
+    c.st = st;
+  });
+}
+function moveChars(dt){
+  Object.values(chars).forEach(c => {
+    let d = dt * SPEED; c.moving = c.path.length > 0;
+    while (c.path.length && d > 0){
+      const p = c.path[0], dx = p.x - c.x, dy = p.y - c.y, L = Math.hypot(dx, dy);
+      c.face = Math.abs(dy) > Math.abs(dx) ? (dy < 0 ? 'up' : 'down') : (dx < 0 ? 'left' : 'right');
+      if (L <= d){ c.x = p.x; c.y = p.y; d -= L; c.path.shift(); } else { c.x += dx/L*d; c.y += dy/L*d; d = 0; }
+    }
+    if (!c.path.length && c.moving === true){ c.moving = false; if (c.t.face) c.face = c.t.face; if (c.t.leave) delete chars[c.id]; }
+  });
+}
+const R = (x,y,w,h,col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x), Math.round(y), w, h); };
+function txt(s, x, y, size, color, font='Rubik', weight=600){
+  ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.direction = font === 'Rubik' ? 'rtl' : 'ltr'; ctx.fillText(s, x, y);
+}
+const hm = d => d.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', hour12:false});
+function counts(){
+  const day = todayStr(), ev = S.events.filter(e => (e.day || e.at.slice(0,10)) === day || new Date(e.at).toLocaleDateString('en-CA') === day);
+  const c = k => ev.filter(e => e.kind === k).length;
+  return {products:c('product_edited') ? c('product_edited') : c('product_imported'), posts:c('post_published'), campaigns:c('campaign_created')};
+}
+function sky(h){ return h < 6.4 ? ['#1e1b4b','#312e81'] : h < 7.6 ? ['#fb923c','#fde68a'] : h < 18 ? ['#38bdf8','#bae6fd'] : h < 19.6 ? ['#f97316','#c084fc'] : ['#0b1026','#1e1b4b']; }
+function plant(x,y){ R(x-3,y,7,6,'#92400e'); R(x-5,y-6,4,6,'#16a34a'); R(x,y-9,4,9,'#22c55e'); R(x+3,y-5,4,5,'#15803d'); }
+function desk(x,y,id,now){
+  const up = AG[id].face === 'up', c = chars[id], glow = c && c.st && c.st.state === 'working' && !c.moving;
+  R(x,y,48,18,'#6b4423'); R(x,y,48,15,'#8b5a2b');
+  const my = up ? y+1 : y+5, ky = up ? y+11 : y+2;
+  R(x+15,my,18,10,'#1f2937');
+  if (glow){ R(x+16,my+1,16,8,'#0ea5e9'); for (let i = 0; i < 3; i++) R(x+18,my+2+i*2,4+((Math.floor(now/180)+i*3)%9),1,'#e0f2fe'); } else R(x+16,my+1,16,8,'#0f172a');
+  R(x+16,ky,16,3,'#e5e7eb'); R(x+39,y+3,4,4,'#f8fafc'); txt(AG[id].emoji, x+7, up ? y+10 : y+11, 6, '#fff');
+}
+function room(now){
+  const d = new Date(), h = d.getHours() + d.getMinutes()/60;
+  R(0,40,W,H-40,'#b98a5a'); for (let y = 40; y < H; y += 8){ R(0,y,W,1,'#a77a4c'); for (let x = (y/8%2)*24; x < W; x += 48) R(x,y,1,8,'#a77a4c'); }
+  R(46,50,180,128,'#3f4d6e'); R(48,52,176,124,'#465679'); R(290,42,94,62,'#4c3b6b');
+  R(298,140,84,70,'#7c2d12'); R(301,143,78,64,'#9a3412'); for (let i = 0; i < 6; i++) R(304+i*13,146,6,58,'#a8431a');
+  R(0,0,W,40,'#2e3a59'); R(0,37,W,4,'#1c2540');
+  const open = Object.values(chars).some(c => Math.hypot(c.x-DOOR.x, c.y-DOOR.y) < 14);
+  R(19,13,26,28,'#3b2a1a'); if (open){ R(21,15,22,26,'#0b0b12'); R(21,15,4,26,'#7a5230'); } else { R(21,15,22,26,'#7a5230'); R(23,17,18,10,'#8b5e34'); R(23,29,18,10,'#8b5e34'); R(38,28,2,2,'#fbbf24'); }
+  const [s1,s2] = sky(h);
+  [[52,8,32,22],[292,8,80,22]].forEach(([x,y,w,hh]) => { R(x-2,y-2,w+4,hh+4,'#cbd5e1'); const g = ctx.createLinearGradient(0,y,0,y+hh); g.addColorStop(0,s1); g.addColorStop(1,s2); ctx.fillStyle = g; ctx.fillRect(x,y,w,hh);
+    if (h < 6.4 || h > 19.6) for (let i = 0; i < 6; i++) R(x+((i*13+7)%w), y+((i*7+3)%hh), 1, 1, '#fff'); R(x+w/2-1,y,2,hh,'#cbd5e1'); });
+  const k = counts(), p = S.kv.today_pnl || {};
+  R(90,4,90,32,'#111827'); R(92,6,86,28,'#0b1220'); R(90,4,90,2,'#fbbf24');
+  txt(`📦${k.products}  📸${k.posts}  📢${k.campaigns}`, 135, 14, 7, '#e5e7eb');
+  const prof = p.profit ?? 0; txt(`${prof < 0 ? '-' : '+'}$${Math.abs(prof).toFixed(0)}`, 135, 26, 6, prof < 0 ? '#f87171' : '#86efac', '"Press Start 2P"', 400);
+  R(186,8,30,16,'#000'); txt(hm(d), 201, 16.5, 5, '#86efac', '"Press Start 2P"', 400);
+  R(226,8,22,26,'#f8fafc'); R(228,10,18,10,'#22c55e'); R(228,22,18,2,'#94a3b8'); R(254,14,30,20,'#6b4423'); R(256,16,6,8,'#ef4444'); R(263,16,5,8,'#3b82f6'); R(269,17,6,7,'#eab308'); R(276,16,5,8,'#10b981');
+  desk(312,52,'manager',now); plant(372,50); plant(296,52);
+  desk(60,62,'researcher',now); desk(160,62,'editor',now); desk(60,150,'content',now); desk(160,150,'campaigner',now);
+  R(306,184,52,6,'#92400e'); R(306,190,52,10,'#b45309'); R(316,164,26,8,'#8b5a2b'); R(320,165,4,3,'#fff'); R(328,165,4,3,'#fff');
+  R(362,128,16,22,'#374151'); R(364,131,12,8,'#111827'); R(374,131,2,2,(Math.floor(now/500)%2)?'#ef4444':'#7f1d1d');
+  R(240,46,10,16,'#93c5fd'); R(241,44,8,4,'#bfdbfe'); plant(12,56); plant(12,200); plant(232,196); plant(118,196);
+  R(10,96,14,34,'#6b4423'); for (let i = 0; i < 4; i++) R(11,98+i*8,12,6,['#ef4444','#3b82f6','#eab308','#10b981'][i]);
+  return h;
+}
+function person(c, now){
+  const a = AG[c.id], x = Math.round(c.x), y = Math.round(c.y), seated = c.st?.state === 'working' && !c.moving && c.t?.seated;
+  const s = seated ? 1 : 0, walk = c.moving ? Math.floor(now/140) % 2 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y, 5, 1.6, 0, 0, Math.PI*2); ctx.fill();
+  if (seated) R(x-5,y-5,10,5,'#334155'); else { R(x-3,y-4+(walk?1:0),2,4,'#1f2937'); R(x+1,y-4+(walk?0:1),2,4,'#1f2937'); }
+  R(x-4,y-9+s,8,6,a.shirt); const ty = seated ? Math.floor(now/110) % 2 : 0;
+  R(x-5,y-8+s+(ty?1:0),1,4,a.skin); R(x+4,y-8+s+(ty?0:1),1,4,a.skin); R(x-3,y-14+s,6,5,a.skin);
+  if (c.face === 'up') R(x-3,y-15+s,6,5,a.hair);
+  else { R(x-3,y-15+s,6,2,a.hair);
+    if (c.face === 'down'){ R(x-3,y-13+s,1,2,a.hair); R(x+2,y-13+s,1,2,a.hair); R(x-2,y-12+s,1,1,'#111'); R(x+1,y-12+s,1,1,'#111'); }
+    else if (c.face === 'left'){ R(x+2,y-13+s,1,3,a.hair); R(x-2,y-12+s,1,1,'#111'); } else { R(x-3,y-13+s,1,3,a.hair); R(x+1,y-12+s,1,1,'#111'); } }
+}
+function bubble(x, y, text, placed){
+  if (text.length > 26) text = text.slice(0, 25) + '…';
+  ctx.font = '600 6px Rubik'; ctx.direction = 'rtl';
+  const w = Math.ceil(ctx.measureText(text).width) + 8, h = 10;
+  let bx = Math.max(2, Math.min(W - w - 2, x - w/2)), by = y - h - 3;
+  for (let i = 0; i < 6 && placed.some(r => bx < r.x+r.w+2 && bx+w+2 > r.x && by < r.y+r.h+1 && by+h+1 > r.y); i++) by -= h + 2;
+  placed.push({x:bx, y:by, w, h});
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = .8; ctx.beginPath(); ctx.roundRect(bx, by, w, h, 2.5); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-2, by+h); ctx.lineTo(x, Math.max(by+h+3, y-2)); ctx.lineTo(x+2, by+h); ctx.fill();
+  txt(text, bx + w/2, by + h/2 + .5, 6, '#111');
+}
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  syncChars(); moveChars(dt);
+  ctx.setTransform(SC,0,0,SC,0,0); ctx.imageSmoothingEnabled = false;
+  const h = room(now);
+  const people = Object.values(chars).sort((a,b) => a.y - b.y);
+  people.forEach(c => person(c, now));
+  ctx.fillStyle = 'rgba(186,230,253,.35)'; ctx.fillRect(288,40,2,64); ctx.fillRect(288,103,38,2); ctx.fillRect(346,103,38,2);
+  txt('🧠 מנהל', 360, 46, 5, '#e9d5ff');
+  const dk = (h < 6.4 || h > 19.6 ? .5 : (h < 7.6 || h > 18 ? .22 : 0)) * (people.length ? .35 : 1);
+  if (dk){ ctx.fillStyle = `rgba(8,10,40,${dk})`; ctx.fillRect(0,0,W,H); }
+  const placed = [];
+  people.slice().reverse().forEach(c => { const top = c.y - 16; const t = c.moving ? '' : (c.st?.activity || '');
+    if (t) bubble(c.x, top, t, placed); else txt(AG[c.id].emoji, c.x, top - 3, 6, '#fff'); });
+  IDS.forEach(id => { const m = marks[id]; if (!m || Date.now() > m.until) return; const p = chars[id] || AG[id].seat;
+    ctx.fillStyle = m.kind === 'fix' ? '#ef4444' : '#22c55e'; ctx.beginPath(); ctx.arc(p.x+8, p.y-11, 4, 0, 7); ctx.fill(); txt(m.kind === 'fix' ? '!' : '✓', p.x+8, p.y-10.5, 6, '#fff', 'Rubik', 800); });
+  for (let i = floaters.length - 1; i >= 0; i--){ const k = (Date.now() - floaters[i].born) / 3000; if (k > 1){ floaters.splice(i,1); continue; }
+    ctx.globalAlpha = 1 - k; txt(floaters[i].text, 135, 44 - k*10, 7, '#fde047', 'Rubik', 800); ctx.globalAlpha = 1; }
+  requestAnimationFrame(frame);
+}
+function resize(){ const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1; SC = Math.max(2, Math.ceil(r.width*dpr/W)); cv.width = W*SC; cv.height = H*SC; }
+addEventListener('resize', resize);
+document.getElementById('zoom').onclick = () => { document.getElementById('stage').classList.toggle('zoom'); setTimeout(resize, 30); };
+
+// ======================= panels =======================
+const $ = id => document.getElementById(id);
+const money = (v, sign) => (v == null ? '—' : (sign && v > 0 ? '+' : v < 0 ? '-' : '') + '$' + Math.abs(v).toFixed(0));
+const KIND = {
+  arrived:e=>`${AG[e.agent]?.emoji} ${AG[e.agent]?.name} הגיע למשרד`, left:e=>`${AG[e.agent]?.emoji} ${AG[e.agent]?.name} סיים ויצא`,
+  task_created:e=>`📁 ${AG[e.agent]?.name || 'המנהל'} ← ${AG[e.data?.to]?.name}: ${e.data?.title}${e.data?.from === 'chat' ? ' (מהצ׳אט)' : ''}`,
+  task_started:e=>`▶️ ${AG[e.agent]?.name} התחיל: ${e.data?.title}`, task_done:e=>`✔️ ${AG[e.agent]?.name} סיים: ${e.data?.title}`,
+  task_failed:e=>`⚠️ ${AG[e.agent]?.name} נתקע: ${e.data?.title}`, approved:e=>`✅ המנהל אישר את ${AG[e.data?.agent]?.name}: ${e.data?.title || ''}`,
+  sent_back:e=>`↩️ המנהל החזיר ל${AG[e.data?.agent]?.name}: ${e.data?.why}`, escalated:e=>`🚨 הוסלם לדני: ${e.data?.why}`,
+  product_imported:e=>`📦 יובא: ${e.data?.input?.title || 'מוצר'}`, product_edited:e=>`✏️ עודכן מוצר באתר`, post_published:e=>`📸 פוסט עלה לאינסטגרם`,
+  campaign_created:e=>`📢 קמפיין נוצר: ${e.data?.input?.name || ''}`, budget_changed:e=>`💰 תקציב שונה`, ads_status_changed:e=>`⏯️ סטטוס קמפיין שונה`,
+  finding:e=>`🔎 ממצא: ${e.data?.cause} ← ${e.data?.fix}`, question:e=>`❓ המנהל שאל את דני: ${e.data?.text}`, report_sent:e=>`📨 הדוח היומי נשלח`,
+  budget_request:e=>`💰 הקמפיינר ביקש תקרה $${e.data?.daily}/יום`, budget_approved:e=>`✅ דני אישר תקציב: $${e.data?.daily}/יום`,
+};
+function statusPill(st){
+  if (!st || !st.present) return ['בבית 🏠', '#334155'];
+  return ({working:['עובד ⌨️','#15803d'], handoff:['מעביר משימה 📁','#1d4ed8'], reviewing:['בודק 🔍','#6d28d9'], idle:['במשרד','#475569']})[st.state] || ['במשרד','#475569'];
+}
+let view = 'office', logFilter = 'all', unread = 0;
+function setBadge(d){ unread = d === 0 ? 0 : unread + d; const b = $('chatBadge'); b.textContent = unread; b.style.display = unread ? 'block' : 'none'; }
+function renderOffice(){
+  const p = S.kv.today_pnl || {}, g = S.kv.goal || {};
+  const pc = (p.profit ?? 0) < 0 ? 'var(--bad)' : 'var(--good)';
+  $('pnl').innerHTML = [['הכנסות',money(p.revenue)],['עלות מוצרים',money(-(p.cogs||0))],['פרסום',money(-(p.ad_spend||0))],['עמלות',money(-(p.fees||0))]]
+    .map(([l,v]) => `<div><span>${l}</span><b>${v}</b></div>`).join('') + `<div class="profit" style="color:${pc}"><span>רווח נקי</span><b>${money(p.profit, true)}</b></div>`;
+  const pct = g.goal ? Math.min(100, g.revenue_to_date / g.goal * 100) : 0, pace = g.goal ? Math.min(100, (g.on_pace_revenue||0) / g.goal * 100) : 0;
+  $('goal').innerHTML = g.goal ? `🎯 יעד חודשי: <b style="color:var(--txt)">$${(g.revenue_to_date||0).toLocaleString()}</b> מתוך $${g.goal.toLocaleString()} · יום ${g.day_of_period} · נשארו ${g.days_left} ימים
+    <div class="bar" style="position:relative"><i style="width:${pct}%"></i><b style="position:absolute;top:-2px;bottom:-2px;right:${pace}%;width:2px;background:#fff"></b></div>
+    צריך ~$${Math.round(g.needed_per_day)} ביום (≈${Math.round(g.orders_needed_per_day)} הזמנות) · פרסום נדרש ~$${Math.round(g.ad_spend_needed_per_day)}/יום · ROAS היום ${p.roas ?? '—'} (breakeven ${p.breakeven_roas ?? '—'})`
+    : 'הנתונים הכספיים יופיעו אחרי הריצה הראשונה';
+  $('agents').innerHTML = IDS.map(id => { const st = S.status[id], [l,c] = statusPill(st);
+    return `<div class="ag"><div class="av" style="border-color:${AG[id].shirt}">${AG[id].emoji}</div><div style="min-width:0"><div class="nm">${AG[id].name}</div>
+      <div class="ac">${st?.present ? (st.activity || '') : (st?.since ? 'עבד לאחרונה ' + new Date(st.since).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '')}</div></div>
+      <span class="st" style="background:${c}">${l}</span></div>`; }).join('');
+  const bp = p.by_product || {};
+  $('byprod').innerHTML = Object.keys(bp).length ? `<table><tr><th>מוצר</th><th>יח׳</th><th>הכנסה</th><th>פרסום</th><th>רווח</th></tr>${
+    Object.entries(bp).sort((a,b) => b[1].revenue - a[1].revenue).map(([n,v]) => `<tr><td>${n}</td><td class="n">${v.units}</td><td class="n">$${v.revenue.toFixed(0)}</td><td class="n">$${v.ad_spend.toFixed(0)}</td>
+      <td class="n" style="color:${v.profit_before_fees < 0 ? 'var(--bad)' : 'var(--good)'}">${money(v.profit_before_fees, true)}</td></tr>`).join('')}</table>` : '<div class="empty">אין מכירות עדיין היום</div>';
+}
+function renderChat(scroll){
+  const box = $('msgs'), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.innerHTML = S.chat.map(m => { const q = m.meta?.type === 'question', r = m.meta?.type === 'daily_report';
+    return `<div class="m ${m.role} ${q ? 'question' : ''} ${r ? 'report' : ''}">${esc(m.text)}${q ? `<div class="chips"><button>מאשר ✅</button><button>לא עכשיו</button><button>תסביר עוד</button></div>` : ''}<time>${new Date(m.at).toLocaleString('he-IL',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'numeric'})}</time></div>`; }).join('')
+    || '<div class="empty">כתוב למנהל כל דבר: רעיון, הוראה או שאלה.</div>';
+  box.querySelectorAll('.chips button').forEach(b => b.onclick = () => submit(b.textContent.replace(/[✅]/g,'').trim()));
+  if (scroll || atBottom) box.scrollTop = box.scrollHeight;
+}
+function renderLog(){
+  const rows = [...S.events.map(e => ({at:e.at, who:e.agent, text:(KIND[e.kind] || (e => `${e.kind}`))(e), type:'event'})),
+                ...S.messages.map(m => ({at:m.at, who:m.sender, text:`💬 ${AG[m.sender]?.emoji || ''} ${AG[m.sender]?.name || m.sender} ← ${AG[m.recipient]?.name || m.recipient}: ${m.text}`, type:'talk'}))]
+    .filter(r => logFilter === 'all' || (logFilter === 'talk' ? r.type === 'talk' : r.who === 'manager'))
+    .sort((a,b) => b.at.localeCompare(a.at)).slice(0, 250);
+  $('feed').innerHTML = rows.map(r => `<div class="row"><time>${new Date(r.at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</time><span class="${r.type === 'talk' ? 'msg' : ''}">${esc(r.text)}</span></div>`).join('') || '<div class="empty">אין פעילות עדיין</div>';
+}
+function renderTasks(){
+  const groups = [['🚨 דורש אותך',['escalated','failed']],['⏳ בעבודה',['pending','rework']],['🔍 ממתין לבדיקת המנהל',['done']],['✅ אושר',['approved']]];
+  const all = Object.values(S.tasks);
+  $('tasks').innerHTML = groups.map(([h,sts]) => { const ts = all.filter(t => sts.includes(t.status)).sort((a,b) => (b.updated_at||'').localeCompare(a.updated_at||'')).slice(0, 40);
+    return ts.length ? `<div class="card"><h3>${h} <span style="color:var(--mut)">(${ts.length})</span></h3>${ts.map(t => `<div class="task">${AG[t.agent]?.emoji || ''} <b>${esc(t.title)}</b>${t.status === 'rework' ? ' ↩️' : ''}<small>${AG[t.agent]?.name || t.agent} · ${t.updated_at ? new Date(t.updated_at).toLocaleString('he-IL',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'numeric'}) : ''}</small></div>`).join('')}</div>` : ''; }).join('')
+    || '<div class="empty">אין משימות</div>';
+}
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function typing(on){ $('typing').style.display = on ? 'block' : 'none'; if (on) $('msgs').scrollTop = 1e9; }
+function submit(text){
+  text = (text || '').trim(); if (!text) return;
+  addChat({id:'l'+Date.now(), role:'danny', text, at:new Date().toISOString()}); $('inp').value = '';
+  sendChat(text);
+}
+let rq = 0;
+rerender = () => { if (rq) return; rq = requestAnimationFrame(() => { rq = 0;
+  $('dot').classList.toggle('on', S.connected);
+  if (view === 'office') renderOffice(); if (view === 'log') renderLog(); if (view === 'tasks') renderTasks(); }); };
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  view = b.dataset.v; document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'view-' + view));
+  if (view === 'chat'){ setBadge(0); renderChat(true); } if (view === 'office') setTimeout(resize, 10); rerender(); });
+document.querySelectorAll('#logSeg button').forEach(b => b.onclick = () => { logFilter = b.dataset.f; document.querySelectorAll('#logSeg button').forEach(x => x.classList.toggle('on', x === b)); renderLog(); });
+$('send').onclick = () => submit($('inp').value);
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); submit($('inp').value); } });
+setInterval(() => { $('clk').textContent = hm(new Date()); }, 1000); $('clk').textContent = hm(new Date());
+
+if ('serviceWorker' in navigator && !DEMO) navigator.serviceWorker.register('sw.js').catch(() => {});
+resize(); requestAnimationFrame(frame);
+if (NOT_CONNECTED) { document.getElementById('login').style.display = 'grid'; document.querySelector('#login .box').innerHTML = '<div style="font-size:54px">🔌</div><h2>המשרד עוד לא מחובר</h2><p style="color:var(--mut)">ההקמה בתהליך. הדף יתעדכן לבד כשהמסד יחובר.</p>'; }
+else if (DEMO) { startDemo(); rerender(); renderChat(); } else startLive().catch(e => { console.error(e); $('dot').style.background = 'var(--bad)'; });
+</script>
+</body>
+</html>
