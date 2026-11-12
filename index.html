@@ -123,9 +123,8 @@
 
 <div id="login"><div class="box">
   <div style="font-size:54px">🏢</div><h2>המשרד של הסוכנים</h2>
-  <div id="step1"><input id="email" type="email" placeholder="your@email.com" autocomplete="email"><button id="sendCode">שלח לי קוד</button></div>
-  <div id="step2" style="display:none"><p style="color:var(--mut);font-size:14px">שלחנו קוד למייל. הקלד אותו כאן:</p>
-    <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"><button id="verify">כניסה</button></div>
+  <div id="step1"><input id="email" type="email" placeholder="your@email.com" autocomplete="username">
+    <input id="pass" type="password" placeholder="סיסמה" autocomplete="current-password" style="direction:ltr"><button id="signin">כניסה</button></div>
   <div class="err" id="err"></div>
 </div></div>
 
@@ -195,18 +194,15 @@ async function sendChat(text){
 function showLogin(){
   const $l = document.getElementById('login'); $l.style.display = 'grid';
   const err = t => document.getElementById('err').textContent = t || '';
-  document.getElementById('sendCode').onclick = async () => {
-    const email = document.getElementById('email').value.trim(); if (!email) return;
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
-    if (error) return err(error.message);
-    err(); document.getElementById('step1').style.display = 'none'; document.getElementById('step2').style.display = 'block';
-  };
-  document.getElementById('verify').onclick = async () => {
-    const email = document.getElementById('email').value.trim(), token = document.getElementById('code').value.trim();
-    const { error } = await sb.auth.verifyOtp({ email, token, type:'email' });
-    if (error) return err('קוד שגוי');
+  const go = async () => {
+    const email = document.getElementById('email').value.trim(), password = document.getElementById('pass').value;
+    if (!email || !password) return;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) return err('אימייל או סיסמה שגויים');
     $l.style.display = 'none'; await loadAll(); subscribe();
   };
+  document.getElementById('signin').onclick = go;
+  document.getElementById('pass').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
 }
 
 // ======================= demo feed =======================
