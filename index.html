@@ -197,7 +197,7 @@ function showLogin(){
   const err = t => document.getElementById('err').textContent = t || '';
   document.getElementById('sendCode').onclick = async () => {
     const email = document.getElementById('email').value.trim(); if (!email) return;
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:true } });
     if (error) return err(error.message);
     err(); document.getElementById('step1').style.display = 'none'; document.getElementById('step2').style.display = 'block';
   };
